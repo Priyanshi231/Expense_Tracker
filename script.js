@@ -1,138 +1,174 @@
-let transactions = [];
+document.addEventListener("DOMContentLoaded", () => {
+    // --- State & Elements ---
+    let transactions = JSON.parse(localStorage.getItem("transactions")) || [];
+    let goalAmount = parseFloat(localStorage.getItem("goal")) || 0;
+    let expenseChart, trendChart, dashLineChart;
 
-// Reset data
-function resetData() {
-  localStorage.clear();
-  transactions = [];
-  render();
-}
+    const loginModal = document.getElementById("login-modal");
+    const signupModal = document.getElementById("signup-modal");
+    const profileMenu = document.getElementById('profile-menu');
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const sidebar = document.querySelector(".sidebar");
 
-// Navigation
-document.querySelectorAll(".nav-link").forEach(link=>{
-  link.addEventListener("click",()=>{
-    document.querySelectorAll(".nav-link").forEach(l=>l.classList.remove("active"));
-    document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
-    link.classList.add("active");
-    document.getElementById(link.dataset.page).classList.add("active");
-  });
+    // --- Authentication Simulation ---
+    const checkLoginState = () => {
+        if (localStorage.getItem('isLoggedIn') === 'true') {
+            document.body.classList.add('logged-in');
+        } else {
+            document.body.classList.remove('logged-in');
+        }
+    };
+
+    const handleLogin = (e) => {
+        e.preventDefault();
+        localStorage.setItem('isLoggedIn', 'true');
+        checkLoginState();
+        loginModal.style.display = "none";
+        signupModal.style.display = "none";
+        alert("Login successful!");
+    };
+
+    const handleLogout = () => {
+        localStorage.removeItem('isLoggedIn');
+        checkLoginState();
+        switchPage('dashboard'); // Go to dashboard on logout
+        alert("You have been logged out.");
+    };
+
+    // --- Modal & Menu Event Listeners ---
+    document.getElementById("login-btn").onclick = () => loginModal.style.display = "block";
+    document.getElementById("signup-btn").onclick = () => signupModal.style.display = "block";
+    document.getElementById("close-login").onclick = () => loginModal.style.display = "none";
+    document.getElementById("close-signup").onclick = () => signupModal.style.display = "none";
+    document.getElementById("login-form").addEventListener('submit', handleLogin);
+    document.getElementById("signup-form").addEventListener('submit', handleLogin);
+    document.getElementById("logout-btn").addEventListener('click', handleLogout);
+    document.getElementById("settings-logout-btn").addEventListener('click', handleLogout);
+    
+    mobileMenuBtn.addEventListener("click", () => sidebar.classList.toggle("active"));
+    
+    document.getElementById('profile-menu-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        profileMenu.classList.toggle('active');
+    });
+    
+    document.getElementById('profile-link').addEventListener('click', (e) => {
+        e.preventDefault();
+        switchPage('settings');
+        profileMenu.classList.remove('active');
+    });
+
+    window.onclick = (event) => {
+        if (event.target == loginModal) loginModal.style.display = "none";
+        if (event.target == signupModal) signupModal.style.display = "none";
+        if (!event.target.matches('.profile-menu, .profile-menu *')) {
+            profileMenu.classList.remove('active');
+        }
+    };
+
+    // --- Navigation ---
+    const switchPage = (pageId) => {
+        document.querySelector(".page.active").classList.remove("active");
+        document.getElementById(pageId).classList.add("active");
+        document.querySelector(".nav-link.active").classList.remove("active");
+        document.querySelector(`.nav-link[data-page='${pageId}']`).classList.add("active");
+        sidebar.classList.remove("active");
+    };
+    document.querySelectorAll(".nav-link").forEach(link => link.addEventListener("click", () => switchPage(link.dataset.page)));
+
+    // --- Theme Toggle ---
+    const themeToggleBtn = document.getElementById("theme-toggle-btn");
+    const themeIcon = themeToggleBtn.querySelector("i");
+    const setTheme = (isDark) => {
+        document.body.classList.toggle("dark", isDark);
+        themeIcon.className = isDark ? "fas fa-moon" : "fas fa-sun";
+        localStorage.setItem("theme", isDark ? "dark" : "light");
+    };
+    setTheme(localStorage.getItem("theme") === "dark");
+    themeToggleBtn.addEventListener("click", () => setTheme(!document.body.classList.contains("dark")));
+    
+    // --- Transaction & Goal Logic ---
+    window.deleteTransaction = (id) => { transactions = transactions.filter(t => t.id !== id); render(); };
+    window.resetData = () => { if (confirm("Are you sure you want to reset all data?")) { transactions = []; goalAmount = 0; render(); }};
+    window.setGoal = () => { const val = document.getElementById("goal-amount").value; if (val) { goalAmount = +val; render(); }};
+
+    document.getElementById("transaction-form").addEventListener("submit", e => {
+        e.preventDefault();
+        transactions.push({
+            id: Date.now(),
+            type: document.getElementById("type").value,
+            description: document.getElementById("description").value,
+            amount: +document.getElementById("amount").value,
+            date: document.getElementById("date").value,
+        });
+        e.target.reset();
+        render();
+    });
+
+    const getBalance = () => transactions.reduce((acc, t) => acc + (t.type === "income" ? t.amount : -t.amount), 0);
+    
+    // --- Main Render Function ---
+    const render = () => {
+        localStorage.setItem("transactions", JSON.stringify(transactions));
+        localStorage.setItem("goal", goalAmount);
+        
+        let totalIncome = 0, totalExpense = 0;
+        const tbody = document.getElementById("transactions-list");
+        tbody.innerHTML = "";
+
+        transactions.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(txn => {
+            txn.type === "income" ? totalIncome += txn.amount : totalExpense += txn.amount;
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>${txn.date}</td>
+                <td>${txn.description}</td>
+                <td>${txn.type}</td>
+                <td style="color:${txn.type === 'expense' ? '#e74c3c' : '#2ecc71'}">${txn.type === 'expense' ? '-' : ''} ₹${txn.amount.toFixed(2)}</td>
+                <td><button onclick="deleteTransaction(${txn.id})">✖</button></td>`;
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById("total-income").innerText = `₹ ${totalIncome.toFixed(2)}`;
+        document.getElementById("total-expense").innerText = `₹ ${totalExpense.toFixed(2)}`;
+        const currentBalance = totalIncome - totalExpense;
+        document.getElementById("balance").innerText = `₹ ${currentBalance.toFixed(2)}`;
+        
+        const percent = goalAmount > 0 ? Math.max(0, Math.min(100, (currentBalance / goalAmount) * 100)) : 0;
+        document.getElementById("goal-circle").style.background = `conic-gradient(var(--primary) ${percent}%, var(--border-color) ${percent}%)`;
+        document.getElementById("goal-percentage").innerText = `${Math.floor(percent)}%`;
+        document.getElementById("goal-status").innerText = goalAmount > 0 ? `Saved ₹${currentBalance.toFixed(2)} of ₹${goalAmount.toFixed(2)}` : "No goal set.";
+        
+        const suggestionList = document.getElementById("suggestion-list");
+        suggestionList.innerHTML = `<li>Review your spending on non-essentials.</li><li>Try to save at least 15% of your income.</li>`;
+        if (totalExpense > totalIncome * 0.8 && totalIncome > 0) {
+            suggestionList.innerHTML = `<li style="color: #e74c3c;">Warning: Expenses are high compared to income!</li>` + suggestionList.innerHTML;
+        }
+
+
+        renderCharts(totalIncome, totalExpense);
+    };
+    
+    const renderCharts = (income, expense) => {
+        if(expenseChart) expenseChart.destroy();
+        if(trendChart) trendChart.destroy();
+        if(dashLineChart) dashLineChart.destroy();
+        
+        const monthlyData = {};
+        transactions.forEach(t => {
+            const month = t.date.slice(0, 7);
+            if (!monthlyData[month]) monthlyData[month] = { income: 0, expense: 0 };
+            monthlyData[month][t.type] += t.amount;
+        });
+        const labels = Object.keys(monthlyData).sort();
+        const incomeByMonth = labels.map(m => monthlyData[m].income);
+        const expenseByMonth = labels.map(m => monthlyData[m].expense);
+
+        expenseChart = new Chart(document.getElementById('expenseChart'), { type: 'doughnut', data: { labels: ["Income", "Expense"], datasets: [{ data: [income, expense], backgroundColor: ["#A5D6A7", "#FFCDD2"], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false } });
+        trendChart = new Chart(document.getElementById('trendChart'), { type: 'line', data: { labels, datasets: [{ label: "Income", data: incomeByMonth, borderColor: "#81C784", fill: true }, { label: "Expense", data: expenseByMonth, borderColor: "#E57373", fill: true }] }, options: { responsive: true, maintainAspectRatio: false } });
+        dashLineChart = new Chart(document.getElementById('dashboardLineChart'), { type: 'bar', data: { labels, datasets: [{ label: "Balance", data: labels.map((m, i) => incomeByMonth[i] - expenseByMonth[i]), backgroundColor: "#90CAF9" }] }, options: { responsive: true, maintainAspectRatio: false } });
+    };
+
+    // --- Initial Load ---
+    checkLoginState();
+    render();
 });
-
-// Add transaction
-const form=document.getElementById("transaction-form");
-form?.addEventListener("submit",e=>{
-  e.preventDefault();
-  const txn={
-    id:Date.now(),
-    type:document.getElementById("type").value,
-    description:document.getElementById("description").value,
-    amount:+document.getElementById("amount").value,
-    date:document.getElementById("date").value
-  };
-  transactions.push(txn);
-  localStorage.setItem("transactions",JSON.stringify(transactions));
-  form.reset(); render();
-});
-
-function deleteTransaction(id){
-  transactions=transactions.filter(t=>t.id!==id);
-  localStorage.setItem("transactions",JSON.stringify(transactions));
-  render();
-}
-
-// Charts
-let expenseChart,trendChart,dashLineChart;
-function renderCharts(income,expense){
-  const ctx1=document.getElementById("expenseChart").getContext("2d");
-  const ctx2=document.getElementById("trendChart").getContext("2d");
-  const ctx3=document.getElementById("dashboardLineChart").getContext("2d");
-  if(expenseChart) expenseChart.destroy();
-  if(trendChart) trendChart.destroy();
-  if(dashLineChart) dashLineChart.destroy();
-
-  expenseChart=new Chart(ctx1,{
-    type:"pie",
-    data:{labels:["Income","Expense"],datasets:[{data:[income,expense],backgroundColor:["#A5D6A7","#FFCDD2"]}]}
-  });
-
-  const monthly={};
-  transactions.forEach(t=>{
-    const m=t.date.slice(0,7);
-    if(!monthly[m]) monthly[m]={income:0,expense:0};
-    monthly[m][t.type]+=t.amount;
-  });
-  const labels=Object.keys(monthly);
-  const inc=labels.map(m=>monthly[m].income);
-  const exp=labels.map(m=>monthly[m].expense);
-
-  trendChart=new Chart(ctx2,{type:"line",data:{labels,datasets:[
-    {label:"Income",data:inc,borderColor:"#81C784",backgroundColor:"#C8E6C9",fill:true},
-    {label:"Expense",data:exp,borderColor:"#E57373",backgroundColor:"#FFEBEE",fill:true}
-  ]}});
-  dashLineChart=new Chart(ctx3,{type:"bar",data:{labels,datasets:[
-    {label:"Balance",data:labels.map((m,i)=>inc[i]-exp[i]),backgroundColor:"#90CAF9"}
-  ]}});
-}
-
-// Render
-function render(){
-  transactions=JSON.parse(localStorage.getItem("transactions"))||[];
-  let income=0,expense=0;
-  const tbody=document.getElementById("transactions-list");
-  if(tbody) tbody.innerHTML="";
-  transactions.forEach(txn=>{
-    if(txn.type==="income") income+=txn.amount; else expense+=txn.amount;
-    if(tbody){
-      const tr=document.createElement("tr");
-      tr.innerHTML=`<td>${txn.date}</td><td>${txn.description}</td><td>${txn.type}</td>
-      <td style="color:${txn.type==='expense'?'#e74c3c':'#2ecc71'}">${txn.type==='expense'?'-':''} ₹${txn.amount.toFixed(2)}</td>
-      <td><button onclick="deleteTransaction(${txn.id})">✖</button></td>`;
-      tbody.appendChild(tr);
-    }
-  });
-  document.getElementById("total-income").innerText=`₹ ${income.toFixed(2)}`;
-  document.getElementById("total-expense").innerText=`₹ ${expense.toFixed(2)}`;
-  document.getElementById("balance").innerText=`₹ ${(income-expense).toFixed(2)}`;
-
-  renderCharts(income,expense);
-  updateGoal(income-expense);
-  smartSuggestions(expense,income);
-}
-
-// Suggestions
-function smartSuggestions(expense,income){
-  const list=document.getElementById("suggestion-list");
-  if(!list) return;
-  list.innerHTML="";
-  const tips=[
-    "Track your daily spending to find hidden leaks.",
-    "Set a monthly budget and stick to it.",
-    "Reduce eating out expenses to save more.",
-    "Prioritize needs over wants before buying.",
-    "Save at least 20% of your income monthly."
-  ];
-  if(expense>income*0.8) tips.unshift("⚠️ Your expenses are too high compared to income!");
-  tips.forEach(t=>{const li=document.createElement("li");li.textContent=t;list.appendChild(li);});
-}
-
-// Goal
-let goalAmount=0;
-function setGoal(){
-  goalAmount=+document.getElementById("goal-amount").value;
-  localStorage.setItem("goal",goalAmount);
-  updateGoal(getBalance());
-}
-function getBalance(){return transactions.reduce((acc,t)=>acc+(t.type==="income"?t.amount:-t.amount),0);}
-function updateGoal(balance){
-  const goal=localStorage.getItem("goal")||0;
-  if(goal>0){
-    const percent=Math.min(100,(balance/goal)*100);
-    document.getElementById("goal-progress").style.width=percent+"%";
-    document.getElementById("goal-status").innerText=`Saved ₹${balance} of ₹${goal}`;
-  }
-}
-
-// Theme
-function toggleTheme(){document.body.classList.toggle("dark");}
-
-// Init
-render();
