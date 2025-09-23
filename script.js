@@ -18,24 +18,10 @@ document.addEventListener("DOMContentLoaded", () => {
             document.body.classList.remove('logged-in');
         }
     };
+    const handleLogin = (e) => { e.preventDefault(); localStorage.setItem('isLoggedIn', 'true'); checkLoginState(); loginModal.style.display = "none"; signupModal.style.display = "none"; alert("Login successful!"); };
+    const handleLogout = () => { localStorage.removeItem('isLoggedIn'); checkLoginState(); switchPage('dashboard'); alert("You have been logged out."); };
 
-    const handleLogin = (e) => {
-        e.preventDefault();
-        localStorage.setItem('isLoggedIn', 'true');
-        checkLoginState();
-        loginModal.style.display = "none";
-        signupModal.style.display = "none";
-        alert("Login successful!");
-    };
-
-    const handleLogout = () => {
-        localStorage.removeItem('isLoggedIn');
-        checkLoginState();
-        switchPage('dashboard'); // Go to dashboard on logout
-        alert("You have been logged out.");
-    };
-
-    // --- Modal & Menu Event Listeners ---
+    // --- Event Listeners ---
     document.getElementById("login-btn").onclick = () => loginModal.style.display = "block";
     document.getElementById("signup-btn").onclick = () => signupModal.style.display = "block";
     document.getElementById("close-login").onclick = () => loginModal.style.display = "none";
@@ -44,27 +30,10 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("signup-form").addEventListener('submit', handleLogin);
     document.getElementById("logout-btn").addEventListener('click', handleLogout);
     document.getElementById("settings-logout-btn").addEventListener('click', handleLogout);
-    
     mobileMenuBtn.addEventListener("click", () => sidebar.classList.toggle("active"));
-    
-    document.getElementById('profile-menu-btn').addEventListener('click', (e) => {
-        e.stopPropagation();
-        profileMenu.classList.toggle('active');
-    });
-    
-    document.getElementById('profile-link').addEventListener('click', (e) => {
-        e.preventDefault();
-        switchPage('settings');
-        profileMenu.classList.remove('active');
-    });
-
-    window.onclick = (event) => {
-        if (event.target == loginModal) loginModal.style.display = "none";
-        if (event.target == signupModal) signupModal.style.display = "none";
-        if (!event.target.matches('.profile-menu, .profile-menu *')) {
-            profileMenu.classList.remove('active');
-        }
-    };
+    document.getElementById('profile-menu-btn').addEventListener('click', (e) => { e.stopPropagation(); profileMenu.classList.toggle('active'); });
+    document.getElementById('profile-link').addEventListener('click', (e) => { e.preventDefault(); switchPage('settings'); profileMenu.classList.remove('active'); });
+    window.onclick = (event) => { if (event.target == loginModal) loginModal.style.display = "none"; if (event.target == signupModal) signupModal.style.display = "none"; if (!event.target.matches('.profile-menu, .profile-menu *')) profileMenu.classList.remove('active'); };
 
     // --- Navigation ---
     const switchPage = (pageId) => {
@@ -79,34 +48,74 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Theme Toggle ---
     const themeToggleBtn = document.getElementById("theme-toggle-btn");
     const themeIcon = themeToggleBtn.querySelector("i");
-    const setTheme = (isDark) => {
-        document.body.classList.toggle("dark", isDark);
-        themeIcon.className = isDark ? "fas fa-moon" : "fas fa-sun";
-        localStorage.setItem("theme", isDark ? "dark" : "light");
-    };
+    const setTheme = (isDark) => { document.body.classList.toggle("dark", isDark); themeIcon.className = isDark ? "fas fa-moon" : "fas fa-sun"; localStorage.setItem("theme", isDark ? "dark" : "light"); };
     setTheme(localStorage.getItem("theme") === "dark");
     themeToggleBtn.addEventListener("click", () => setTheme(!document.body.classList.contains("dark")));
     
     // --- Transaction & Goal Logic ---
     window.deleteTransaction = (id) => { transactions = transactions.filter(t => t.id !== id); render(); };
-    window.resetData = () => { if (confirm("Are you sure you want to reset all data?")) { transactions = []; goalAmount = 0; render(); }};
+    window.resetData = () => { if (confirm("Are you sure?")) { transactions = []; goalAmount = 0; render(); }};
     window.setGoal = () => { const val = document.getElementById("goal-amount").value; if (val) { goalAmount = +val; render(); }};
 
     document.getElementById("transaction-form").addEventListener("submit", e => {
         e.preventDefault();
-        transactions.push({
-            id: Date.now(),
-            type: document.getElementById("type").value,
-            description: document.getElementById("description").value,
-            amount: +document.getElementById("amount").value,
-            date: document.getElementById("date").value,
-        });
+        transactions.push({ id: Date.now(), type: document.getElementById("type").value, description: document.getElementById("description").value, amount: +document.getElementById("amount").value, date: document.getElementById("date").value });
         e.target.reset();
         render();
     });
 
-    const getBalance = () => transactions.reduce((acc, t) => acc + (t.type === "income" ? t.amount : -t.amount), 0);
-    
+    // --- Chatbot Logic ---
+    const chatbotWindow = document.getElementById('chatbot-window');
+    const chatbotToggleBtn = document.getElementById('chatbot-toggle-btn');
+    const closeChatbotBtn = document.getElementById('close-chatbot-btn');
+    const chatbotSendBtn = document.getElementById('chatbot-send-btn');
+    const chatbotInput = document.getElementById('chatbot-input');
+    const chatbotBody = document.getElementById('chatbot-body');
+
+    chatbotToggleBtn.addEventListener('click', () => chatbotWindow.classList.toggle('active'));
+    closeChatbotBtn.addEventListener('click', () => chatbotWindow.classList.remove('active'));
+
+    const chatbotResponses = {
+        "budget": "Budgeting is crucial! Start by tracking your income and expenses for a month. Then, categorize your spending and set limits for each category. The 50/30/20 rule is a great starting point: 50% for needs, 30% for wants, and 20% for savings.",
+        "savings": "To save more, try automating your savings. Set up a recurring transfer from your checking to your savings account each payday. Also, look for small expenses to cut, like daily coffees, as they add up over time.",
+        "investment": "Investing can grow your wealth. For beginners, low-cost index funds or ETFs are a good start. It's wise to consult a financial advisor to understand your risk tolerance and goals before investing.",
+        "debt": "To tackle debt, consider the 'avalanche' method (paying off high-interest debt first) or the 'snowball' method (paying off smallest debts first for motivation). Consolidating debt might also be an option.",
+        "default": "I can help with questions about budgeting, savings, investment, or debt. What's on your mind?"
+    };
+
+    const getBotResponse = (userInput) => {
+        userInput = userInput.toLowerCase();
+        for (const keyword in chatbotResponses) {
+            if (userInput.includes(keyword)) {
+                return chatbotResponses[keyword];
+            }
+        }
+        return chatbotResponses.default;
+    };
+
+    const addMessageToChat = (text, sender) => {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `chatbot-message ${sender}`;
+        messageDiv.textContent = text;
+        chatbotBody.appendChild(messageDiv);
+        chatbotBody.scrollTop = chatbotBody.scrollHeight;
+    };
+
+    const handleChatbotSend = () => {
+        const userInput = chatbotInput.value.trim();
+        if (userInput) {
+            addMessageToChat(userInput, 'user');
+            chatbotInput.value = '';
+            setTimeout(() => {
+                const botResponse = getBotResponse(userInput);
+                addMessageToChat(botResponse, 'bot');
+            }, 500);
+        }
+    };
+
+    chatbotSendBtn.addEventListener('click', handleChatbotSend);
+    chatbotInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleChatbotSend(); });
+
     // --- Main Render Function ---
     const render = () => {
         localStorage.setItem("transactions", JSON.stringify(transactions));
@@ -119,12 +128,7 @@ document.addEventListener("DOMContentLoaded", () => {
         transactions.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(txn => {
             txn.type === "income" ? totalIncome += txn.amount : totalExpense += txn.amount;
             const tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td>${txn.date}</td>
-                <td>${txn.description}</td>
-                <td>${txn.type}</td>
-                <td style="color:${txn.type === 'expense' ? '#e74c3c' : '#2ecc71'}">${txn.type === 'expense' ? '-' : ''} ₹${txn.amount.toFixed(2)}</td>
-                <td><button onclick="deleteTransaction(${txn.id})">✖</button></td>`;
+            tr.innerHTML = `<td>${txn.date}</td><td>${txn.description}</td><td>${txn.type}</td><td style="color:${txn.type === 'expense' ? '#e74c3c' : '#2ecc71'}">${txn.type === 'expense' ? '-' : ''} ₹${txn.amount.toFixed(2)}</td><td><button onclick="deleteTransaction(${txn.id})">✖</button></td>`;
             tbody.appendChild(tr);
         });
 
@@ -139,11 +143,8 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("goal-status").innerText = goalAmount > 0 ? `Saved ₹${currentBalance.toFixed(2)} of ₹${goalAmount.toFixed(2)}` : "No goal set.";
         
         const suggestionList = document.getElementById("suggestion-list");
-        suggestionList.innerHTML = `<li>Review your spending on non-essentials.</li><li>Try to save at least 15% of your income.</li>`;
-        if (totalExpense > totalIncome * 0.8 && totalIncome > 0) {
-            suggestionList.innerHTML = `<li style="color: #e74c3c;">Warning: Expenses are high compared to income!</li>` + suggestionList.innerHTML;
-        }
-
+        const suggestions = [ "Cut down on non-essential spending.", "Set a budget and stick to it.", "Track your daily expenses to spot patterns.",  "Set alerts to avoid overspending.", "Create goals and watch your savings grow!" ];
+        suggestionList.innerHTML = suggestions.map(s => `<li>${s}</li>`).join('');
 
         renderCharts(totalIncome, totalExpense);
     };
@@ -154,18 +155,15 @@ document.addEventListener("DOMContentLoaded", () => {
         if(dashLineChart) dashLineChart.destroy();
         
         const monthlyData = {};
-        transactions.forEach(t => {
-            const month = t.date.slice(0, 7);
-            if (!monthlyData[month]) monthlyData[month] = { income: 0, expense: 0 };
-            monthlyData[month][t.type] += t.amount;
-        });
+        transactions.forEach(t => { const month = t.date.slice(0, 7); if (!monthlyData[month]) monthlyData[month] = { income: 0, expense: 0 }; monthlyData[month][t.type] += t.amount; });
         const labels = Object.keys(monthlyData).sort();
         const incomeByMonth = labels.map(m => monthlyData[m].income);
         const expenseByMonth = labels.map(m => monthlyData[m].expense);
 
-        expenseChart = new Chart(document.getElementById('expenseChart'), { type: 'doughnut', data: { labels: ["Income", "Expense"], datasets: [{ data: [income, expense], backgroundColor: ["#A5D6A7", "#FFCDD2"], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false } });
-        trendChart = new Chart(document.getElementById('trendChart'), { type: 'line', data: { labels, datasets: [{ label: "Income", data: incomeByMonth, borderColor: "#81C784", fill: true }, { label: "Expense", data: expenseByMonth, borderColor: "#E57373", fill: true }] }, options: { responsive: true, maintainAspectRatio: false } });
-        dashLineChart = new Chart(document.getElementById('dashboardLineChart'), { type: 'bar', data: { labels, datasets: [{ label: "Balance", data: labels.map((m, i) => incomeByMonth[i] - expenseByMonth[i]), backgroundColor: "#90CAF9" }] }, options: { responsive: true, maintainAspectRatio: false } });
+        const chartOptions = { responsive: true, maintainAspectRatio: false };
+        expenseChart = new Chart(document.getElementById('expenseChart'), { type: 'doughnut', data: { labels: ["Income", "Expense"], datasets: [{ data: [income, expense], backgroundColor: ["#A5D6A7", "#FFCDD2"], borderWidth: 0 }] }, options: chartOptions });
+        trendChart = new Chart(document.getElementById('trendChart'), { type: 'line', data: { labels, datasets: [{ label: "Income", data: incomeByMonth, borderColor: "#81C784", fill: true }, { label: "Expense", data: expenseByMonth, borderColor: "#E57373", fill: true }] }, options: chartOptions });
+        dashLineChart = new Chart(document.getElementById('dashboardLineChart'), { type: 'bar', data: { labels, datasets: [{ label: "Balance", data: labels.map((m, i) => incomeByMonth[i] - expenseByMonth[i]), backgroundColor: "#90CAF9" }] }, options: chartOptions });
     };
 
     // --- Initial Load ---
