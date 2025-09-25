@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en-IN">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>FinTrack - Professional Expense Tracker</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Login Modal -->
+    <div id="login-modal" class="modal hidden">
+        <div class="modal-content auth-modal">
+            <span class="close-btn" id="close-login">&times;</span>
+            <div class="modal-header">
+                <h2>Welcome Back</h2>
+                <p>Please enter your details to log in.</p>
+            </div>
+            <form id="login-form">
+                <div class="input-group"><i class="fas fa-envelope"></i><input type="email" id="login-email" placeholder="Email" required></div>
+                <div class="input-group"><i class="fas fa-lock"></i><input type="password" id="login-password" placeholder="Password" required></div>
+                <button type="submit">Login</button>
+                <p class="form-switch">Don't have an account? <a href="#" id="switchToSignup">Sign Up</a></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Signup Modal -->
+    <div id="signup-modal" class="modal hidden">
+        <div class="modal-content auth-modal">
+            <span class="close-btn" id="close-signup">&times;</span>
+            <div class="modal-header">
+                <h2>Create an Account</h2>
+                <p>Join us and take control of your finances.</p>
+            </div>
+            <form id="signup-form">
+                <div class="input-group"><i class="fas fa-user"></i><input type="text" id="signup-name" placeholder="Full Name" required></div>
+                <div class="input-group"><i class="fas fa-envelope"></i><input type="email" id="signup-email" placeholder="Email" required></div>
+                <div class="input-group"><i class="fas fa-lock"></i><input type="password" id="signup-password" placeholder="Password" required></div>
+                <button type="submit">Create Account</button>
+                <p class="form-switch">Already have an account? <a href="#" id="switchToLogin">Log In</a></p>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Edit Profile Modal -->
+    <div id="edit-profile-modal" class="modal hidden">
+        <div class="modal-content">
+             <span class="close-btn" id="close-edit-profile">&times;</span>
+             <h2>Edit Your Profile</h2>
+             <form id="edit-profile-form" class="centered-form">
+                <div class="input-group"><i class="fas fa-user"></i><input type="text" id="edit-name" placeholder="Full Name" required></div>
+                <div class="input-group"><i class="fas fa-phone"></i><input type="tel" id="edit-phone" placeholder="Phone Number"></div>
+                <div class="input-group"><i class="fas fa-image"></i><input type="text" id="edit-avatar" placeholder="Avatar Image URL"></div>
+                <button type="submit">Save Changes</button>
+             </form>
+        </div>
+    </div>
+    
+    <!-- Message Popup for user feedback -->
+    <div id="message-popup" class="message-popup"></div>
+
+    <div class="top-header">
+        <h1 class="logo"><i class="fas fa-wallet"></i> FinTrack</h1>
+        <div class="header-controls">
+            <button id="theme-toggle-btn" class="theme-btn" aria-label="Toggle Theme"><i class="fas fa-sun"></i></button>
+            <div class="auth-buttons">
+                <button id="login-btn">Login</button>
+                <button id="signup-btn" class="signup-btn">Sign Up</button>
+            </div>
+            <div id="profile-menu" class="profile-menu">
+                <button id="profile-menu-btn" class="profile-btn"><img id="header-avatar" src="https://i.pravatar.cc/40" alt="User"></button>
+            </div>
+            <button id="mobile-menu-btn" class="menu-btn"><i class="fas fa-bars"></i></button>
+        </div>
+    </div>
+    
+    <div class="content-wrapper">
+        <div class="dashboard-container">
+            <aside class="sidebar">
+                <ul class="sidebar-nav">
+                    <li class="nav-link" data-page="dashboard"><i class="fas fa-chart-pie"></i><span>Dashboard</span></li>
+                    <li class="nav-link" data-page="transactions"><i class="fas fa-exchange-alt"></i><span>Transactions</span></li>
+                    <li class="nav-link" data-page="reports"><i class="fas fa-chart-line"></i><span>Reports</span></li>
+                    <li class="nav-link" data-page="profile"><i class="fas fa-user-circle"></i><span>Profile</span></li>
+                    <li class="nav-link" data-page="link-accounts"><i class="fas fa-link"></i><span>Link Accounts</span></li>
+                    <li class="nav-link" data-page="settings"><i class="fas fa-cog"></i><span>Settings</span></li>
+                </ul>
+            </aside>
+    
+            <main class="main-content">
+                <section id="dashboard" class="page">
+                    <!-- Dashboard content remains the same -->
+                    <header><h1>Dashboard Overview</h1></header>
+                    <div class="cards">
+                        <div class="card income"><h3>Total Income</h3><p id="total-income">₹ 0.00</p></div>
+                        <div class="card expense"><h3>Total Expenses</h3><p id="total-expense">₹ 0.00</p></div>
+                        <div class="card balance"><h3>Current Balance</h3><p id="balance">₹ 0.00</p></div>
+                    </div>
+                    <div class="chart-container full-width-chart"><h2>Monthly Balance Trend</h2><canvas id="dashboardLineChart"></canvas></div>
+                    <div class="dashboard-bottom-grid">
+                        <div class="goal-section"><h2><i class="fas fa-bullseye"></i> Savings Goal</h2><div class="goal-input"><input type="number" id="goal-amount" placeholder="Set Goal (₹)" required><button onclick="setGoal()">Set</button></div><div class="goal-circle-container"><div id="goal-circle" class="goal-circle"><div class="goal-circle-inner"><span id="goal-percentage">0%</span></div></div></div><p id="goal-status">No goal set.</p></div>
+                        <div class="suggestions"><h2><i class="fas fa-lightbulb"></i> Smart Suggestions</h2><ul id="suggestion-list"></ul></div>
+                    </div>
+                </section>
+    
+                <section id="transactions" class="page">
+                    <!-- Transactions content remains the same -->
+                    <header><h1>Manage Transactions</h1></header>
+                    <form id="transaction-form"><select id="type" required><option value="income">Income</option><option value="expense">Expense</option></select><input type="text" id="description" placeholder="Description" required><input type="number" id="amount" placeholder="Amount (₹)" step="0.01" required><input type="date" id="date" required><button type="submit">Add Transaction</button></form>
+                    <table><thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th><th>Action</th></tr></thead><tbody id="transactions-list"></tbody></table>
+                </section>
+    
+                <section id="reports" class="page">
+                    <!-- Reports content remains the same -->
+                    <header><h1>Financial Reports</h1></header>
+                    <div class="reports-grid">
+                        <div class="chart-container"><h3>Income vs Expense Breakdown</h3><canvas id="expenseChart"></canvas></div>
+                        <div class="chart-container"><h3>Monthly Income vs Expense Trends</h3><canvas id="trendChart"></canvas></div>
+                    </div>
+                </section>
+                
+                <section id="profile" class="page">
+                     <header><h1>User Profile</h1></header>
+                     <div class="profile-page-card">
+                         <div class="profile-header">
+                             <img src="https://i.pravatar.cc/120" alt="User Avatar" id="profile-page-avatar" class="profile-avatar-large">
+                             <div class="profile-header-info">
+                                 <h2 id="profile-page-name">Guest User</h2>
+                                 <p id="profile-page-email">guest@example.com</p>
+                             </div>
+                         </div>
+                         <div class="profile-details">
+                             <div class="detail-item"><i class="fas fa-phone"></i><span><strong>Phone:</strong> <span id="profile-page-phone">Not set</span></span></div>
+                             <div class="detail-item"><i class="fas fa-calendar-alt"></i><span><strong>Member Since:</strong> <span id="profile-page-joined">N/A</span></span></div>
+                             <div class="detail-item"><i class="fas fa-arrow-down"></i><span><strong>Income Entries:</strong> <span id="profile-page-income-count">0</span></span></div>
+                             <div class="detail-item"><i class="fas fa-arrow-up"></i><span><strong>Expense Entries:</strong> <span id="profile-page-expense-count">0</span></span></div>
+                             <div class="detail-item"><i class="fas fa-exclamation-triangle"></i><span><strong>Largest Expense:</strong> <span id="profile-page-largest-expense">₹0.00</span></span></div>
+                             <div class="detail-item"><i class="fas fa-calculator"></i><span><strong>Average Expense:</strong> <span id="profile-page-avg-expense">₹0.00</span></span></div>
+                         </div>
+                         <div class="profile-actions">
+                             <button id="edit-profile-btn"><i class="fas fa-edit"></i> Edit Profile</button>
+                             <button id="profile-logout-btn" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+                         </div>
+                     </div>
+                </section>
+                
+                <section id="link-accounts" class="page">
+                    <!-- Link Accounts content remains the same, but with new button colors from CSS -->
+                    <header><h1>Link Your Accounts</h1></header>
+                    <div class="settings-card">
+                        <h3>Connect Payment Apps</h3>
+                        <p>Link your accounts to automatically sync your transactions and get a complete view of your finances. (This is a UI demonstration).</p>
+                        <div class="account-linking-buttons">
+                            <button class="link-btn paytm"><i class="fas fa-wallet"></i> Link Paytm</button>
+                            <button class="link-btn phonepe"><i class="fas fa-mobile-alt"></i> Link PhonePe</button>
+                            <button class="link-btn gpay"><i class="fab fa-google-pay"></i> Link Google Pay</button>
+                            <button class="link-btn bank"><i class="fas fa-university"></i> Link Bank Account</button>
+                        </div>
+                    </div>
+                </section>
+    
+                <section id="settings" class="page">
+                    <!-- Settings content remains the same -->
+                     <header><h1>Application Settings</h1></header>
+                    <div class="settings-grid">
+                        <div class="settings-card">
+                            <h3><i class="fas fa-palette"></i> Appearance</h3>
+                            <p>Toggle between light and dark themes to suit your preference.</p>
+                            <button id="settings-theme-toggle">Toggle Dark/Light Mode</button>
+                        </div>
+                        <div class="settings-card">
+                            <h3><i class="fas fa-trash-alt"></i> Data Management</h3>
+                            <p>Permanently delete all your transaction and goal data from this device.</p>
+                            <button onclick="resetData()" class="reset-btn">Reset All Data</button>
+                        </div>
+                        <div class="settings-card">
+                            <h3><i class="fas fa-comment-alt"></i> Send Feedback</h3>
+                            <textarea id="feedback-box" placeholder="Share your thoughts or report an issue..." required></textarea>
+                            <button>Submit Feedback</button>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+        
+        <section id="home" class="page">
+            <div class="hero">
+                <h1>Take Control of Your Financial Future</h1>
+                <p>FinTrack is the simplest, most powerful way to manage your personal finances. Track income, expenses, and savings goals all in one place.</p>
+                <button id="home-signup-btn" class="hero-btn">Get Started for Free</button>
+            </div>
+            <div class="features">
+                <h2>Why Choose FinTrack?</h2>
+                <div class="feature-grid">
+                    <div class="feature-card"><i class="fas fa-tachometer-alt"></i><h3>Intuitive Dashboard</h3><p>Get a quick overview of your financial health at a glance.</p></div>
+                    <div class="feature-card"><i class="fas fa-receipt"></i><h3>Easy Tracking</h3><p>Log income and expenses in seconds with our simple form.</p></div>
+                    <div class="feature-card"><i class="fas fa-bullseye"></i><h3>Savings Goals</h3><p>Set and track your financial goals to stay motivated.</p></div>
+                    <div class="feature-card"><i class="fas fa-chart-bar"></i><h3>Insightful Reports</h3><p>Visualize your spending habits with clear, concise charts.</p></div>
+                </div>
+            </div>
+            <div class="how-it-works">
+                <h2>Get Started in 3 Easy Steps</h2>
+                <div class="steps-container">
+                    <div class="step-card"><span>1</span><h3>Create Account</h3><p>Sign up for free in less than a minute.</p></div>
+                    <div class="step-card"><span>2</span><h3>Add Transactions</h3><p>Start logging your income and expenses as they happen.</p></div>
+                    <div class="step-card"><span>3</span><h3>Gain Insights</h3><p>Watch your financial picture become clear and make smarter decisions.</p></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Chatbot -->
+        <div class="chatbot-container">
+            <div id="chatbot-window" class="chatbot-window"><div class="chatbot-header"><h3>AI Financial Assistant</h3><button id="close-chatbot-btn">&times;</button></div><div id="chatbot-body" class="chatbot-body"><div class="chatbot-message bot">Hello! How can I help you with your finances today?</div></div><div class="chatbot-footer"><input type="text" id="chatbot-input" placeholder="Ask a question..."><button id="chatbot-send-btn"><i class="fas fa-paper-plane"></i></button></div></div>
+            <button id="chatbot-toggle-btn" class="chatbot-toggle-btn"><i class="fas fa-comment-dots"></i></button>
+        </div>
+    </div>
+    
+    <footer class="site-footer">
+        <div class="footer-content">
+            <div class="footer-section about">
+                <h2 class="logo-text"><i class="fas fa-wallet"></i> FinTrack</h2>
+                <p>Your personal finance companion to help you track spending, manage budgets, and achieve your savings goals. Take control of your money today!</p>
+                <div class="contact">
+                    <span><i class="fas fa-phone"></i> &nbsp; +91 123-456-7890</span>
+                    <span><i class="fas fa-envelope"></i> &nbsp; contact@fintrack.example.com</span>
+                </div>
+                <div class="socials">
+                    <a href="#"><i class="fab fa-facebook"></i></a>
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                </div>
+            </div>
+            <div class="footer-section links">
+                <h2>Quick Links</h2>
+                <ul>
+                    <li><a href="#">About Us</a></li>
+                    <li><a href="#">Privacy Policy</a></li>
+                    <li><a href="#">Terms of Service</a></li>
+                    <li><a href="#">Contact Support</a></li>
+                </ul>
+            </div>
+            <div class="footer-section contact-form">
+                <h2>Stay Updated</h2>
+                <p>Subscribe to our newsletter for the latest financial tips.</p>
+                <form action="#" method="post">
+                    <input type="email" name="email" class="text-input" placeholder="Your email address...">
+                    <button type="submit" class="btn-subscribe"><i class="fas fa-envelope"></i> Subscribe</button>
+                </form>
+            </div>
+        </div>
+        <div class="footer-bottom">&copy; 2025 FinTrack.com | Designed with ❤️ in Indore</div>
+    </footer>
+    <script src="script.js"></script>
+</body>
+</html>
+
